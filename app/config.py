@@ -1,13 +1,16 @@
+import os
 from functools import lru_cache
 from typing import Literal
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+_ON_VERCEL = bool(os.getenv("VERCEL"))
+
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
-    database_url: str = "sqlite:///./dev.db"
+    database_url: str = "sqlite:////tmp/dev.db" if _ON_VERCEL else "sqlite:///./dev.db"
     db_echo: bool = False
 
     aws_access_key_id: str | None = None
@@ -29,8 +32,8 @@ class Settings(BaseSettings):
     session_hours: int = 8
     login_code_ttl_minutes: int = 10
     login_code_max_attempts: int = 5
-    cookie_secure: bool = False
-    demo_show_login_code: bool = False  # DEMO ONLY: returns the code to the login page
+    cookie_secure: bool = _ON_VERCEL
+    demo_show_login_code: bool = _ON_VERCEL and not (os.getenv("RESEND_API_KEY") or os.getenv("AWS_ACCESS_KEY_ID"))
     dev_print_login_codes: bool = False  # NEVER enable in production
 
     cors_origins: str = "http://localhost:8000,http://127.0.0.1:8000"
