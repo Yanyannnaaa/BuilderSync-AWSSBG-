@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>BuilderSync · Member Portal</title><link rel="stylesheet" href="/static/style.css"></head>
+<body>
+<div id="toast" class="toast"></div>
+<aside>
+  <img class="emblem" src="/static/logo.png" alt="AWS Student Builder Group – Jose Rizal University">
+  <h1>BuilderSync</h1><div class="sub">Member Portal</div>
+  <div class="who" id="who"></div>
+  <nav>
+    <a class="on" data-view="all">My Overview</a>
+    <a data-view="attendance">My Attendance</a>
+    <a data-view="submit">Submit Files</a>
+    <a data-view="announce">Announcements</a>
+    <a data-view="profile">Profile</a>
+  </nav>
+  <button class="logout" id="logoutBtn">Sign out</button>
+</aside>
+<main>
+  <h2>Dashboard</h2><div class="crumb">Member Portal · Student View</div>
+  <div class="bento">
+    <section class="card" data-tile="profile">
+      <h3>My Profile &amp; Standing <span class="status-pill" id="pill"></span></h3>
+      <div class="profile">
+        <div class="gauge" id="gauge"><div><span id="rate">–</span></div></div>
+        <dl id="meta"></dl>
+      </div>
+      <p class="note" id="absNote"></p>
+    </section>
+
+    <section class="card" data-tile="attendance">
+      <h3>My Attendance History</h3>
+      <div class="scroll" id="history"></div>
+    </section>
+
+    <section class="card" data-tile="submit">
+      <h3>Requirement File Submission</h3>
+      <form id="upForm" class="stack">
+        <select id="reqType">
+          <option value="Event_Documentation">Event Documentation</option>
+          <option value="Consent_Form">Consent Form</option>
+          <option value="Project_Proposal">Project Proposal</option>
+          <option value="Liquidation">Liquidation</option>
+        </select>
+        <div class="drop" id="drop">Drag &amp; drop file here or browse (.pdf, .docx, .png)<input type="file" id="file" accept=".pdf,.docx,.png" hidden></div>
+        <div class="note">Will be saved as:</div>
+        <div class="mono" id="preview">–</div>
+        <button class="gold">Submit File</button>
+      </form>
+      <h4>My submissions</h4>
+      <div class="scroll short" id="mine"></div>
+    </section>
+
+    <section class="card" data-tile="announce">
+      <h3>Organization Announcements <span class="note">read-only</span></h3>
+      <div class="scroll" id="anns"></div>
+    </section>
+  </div>
+</main>
+<script src="/static/common.js"></script>
+<script>
+let me;
+async function loadProfile() {
+  const p = await api("/api/me/profile"); me = p.user;
+  $("#who").textContent = me.full_name + " · " + me.student_number;
+  const pill = $("#pill"); pill.textContent = me.is_active ? "ACTIVE MEMBER" : "INACTIVE"; pill.className = "status-pill " + (me.is_active ? "on" : "off");
+  const r = p.attendance_rate;
+  $("#rate").innerHTML = r == null ? "–<small>no data yet</small>" : `${r}%<small>Personal Attendance</small>`;
+  $("#gauge").style.setProperty("--p", r ?? 0);
+  $("#meta").innerHTML = [["Student Name", me.full_name], ["Student No", me.student_number], ["Year Level", me.year_level],
+    ["Department", me.department || "—"], ["School Email", me.school_email], ["Personal Email", me.personal_email], ["Role", me.officer_title || me.role]]
+    .map(([k, v]) => `<dt>${k}</dt><dd>${esc(v)}</dd>`).join("");
+  $("#absNote").textContent = `${p.meetings_logged} mandatory meetings logged · ${p.absences} absence(s).` +
+    (me.is_active ? "" : " You are inactive; please contact the Secretary.");
+}
+async function loadHistory() {
+  const h = await api("/api/me/attendance");
+  $("#history").innerHTML = h.map((x) => `<div class="hist"><span>${fmtDate(x.meeting_date)} - ${esc(x.meeting_title)}${x.is_mandatory ? "" : " <small>(optional)</small>"}</span>
+    <b class="tag-${x.status}">${x.status === "Present" ? "Attended" : x.status}</b></div>`).join("") || "<p class='note'>No attendance logged yet.</p>";
+}
+async function loadMine() {
+  const s = await api("/api/submissions/mine");
+  $("#mine").innerHTML = s.map((x) => `<div class="hist"><span class="mono">${esc(x.standardized_filename)}</span><small>${fmtDate(x.submitted_at)}</small></div>`).join("") || "<p class='note'>Nothing submitted yet.</p>";
+}
+async function loadAnns() {
+  const a = await api("/api/announcements");
+  $("#anns").innerHTML = a.map((x) => { const d = new Date(x.sent_at);
+    return `<div class="ann"><div class="d">${d.toLocaleString(undefined, { month: "short" })}<b>${d.getDate()}</b></div><div><strong>${esc(x.title)}</strong><p>${esc(x.content)}</p></div></div>`; }).join("") || "<p class='note'>No announcements.</p>";
+}
+
+const fileIn = $("#file"), drop = $("#drop");
+async function refreshPreview() {
+  const f = fileIn.files[0];
+  const ext = f ? f.name.split(".").pop().toLowerCase() : "pdf";
+  drop.firstChild.textContent = f ? "Selected: " + f.name : "Drag & drop file here or browse (.pdf, .docx, .png)";
+  try { $("#preview").textContent = (await api(`/api/submissions/preview-name?requirement_type=${encodeURIComponent($("#reqType").value)}&ext=${ext}`)).filename; }
+  catch { $("#preview").textContent = "Unsupported file type"; }
+}
+dropzone(drop, fileIn, refreshPreview);
+$("#reqType").addEventListener("change", refreshPreview);
+$("#upForm").addEventListener("submit", guard(async (e) => {
+  e.preventDefault();
+  if (!fileIn.files[0]) return toast("Choose a file first", true);
+  const fd = new FormData(); fd.append("requirement_type", $("#reqType").value); fd.append("file", fileIn.files[0]);
+  const r = await api("/api/submissions/upload", { method: "POST", body: fd });
+  toast("Submitted as " + r.standardized_filename); fileIn.value = ""; refreshPreview(); loadMine();
+}));
+
+initNav();
+guard(async () => { await Promise.all([loadProfile(), loadHistory(), loadMine(), loadAnns()]); refreshPreview(); })();
+</script></body></html>

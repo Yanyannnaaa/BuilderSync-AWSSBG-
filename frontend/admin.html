@@ -1,0 +1,260 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>BuilderSync · Officer Portal</title><link rel="stylesheet" href="/static/style.css"></head>
+<body>
+<div id="toast" class="toast"></div>
+<aside>
+  <img class="emblem" src="/static/logo.png" alt="AWS Student Builder Group – Jose Rizal University">
+  <h1>BuilderSync</h1><div class="sub">Officer Portal</div>
+  <div class="who" id="who"></div>
+  <nav>
+    <a class="on" data-view="all">Dashboard</a>
+    <a data-view="members">Builders</a>
+    <a data-view="attendance">Attendance</a>
+    <a data-view="repo">Repository</a>
+    <a data-view="broadcast">Broadcast</a>
+    <a data-view="audit" id="navAudit" class="hidden">Audit Log</a>
+  </nav>
+  <button class="logout" id="logoutBtn">Sign out</button>
+</aside>
+<main>
+  <h2>Dashboard</h2><div class="crumb" id="crumb">Officer Portal</div>
+  <div class="bento">
+
+    <section class="card" data-tile="members">
+      <h3>Master Member &amp; Officer Directory
+        <span><label style="cursor:pointer;padding:4px 10px;border:1px solid var(--line);border-radius:10px;font-size:.78rem">Import CSV<input type="file" id="csvIn" accept=".csv" hidden></label>
+        <button class="gold small" id="addBtn">+ Add</button></span></h3>
+      <div class="row">
+        <input id="fSearch" placeholder="Search name / student no.">
+        <select id="fRole"><option value="">All roles</option><option>Officer</option><option>Member</option></select>
+        <select id="fDept"><option value="">All depts</option><option>Creatives</option><option>Marketing</option><option>Media</option><option>Relations</option><option>Operations</option><option>Technology</option></select>
+        <select id="fYear"><option value="">All years</option><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option></select>
+        <select id="fStatus"><option value="">Any status</option><option value="true">Active</option><option value="false">Inactive</option></select>
+      </div>
+      <div class="scroll"><table><thead><tr><th>Student No.</th><th>Name</th><th>Role / Dept / Yr</th><th>Emails</th><th>Status</th></tr></thead><tbody id="memberRows"></tbody></table></div>
+    </section>
+
+    <section class="card" data-tile="attendance">
+      <h3>Live Meeting Attendance Manager</h3>
+      <div class="row"><select id="meetingSel"></select><button class="ghost" id="newMeetingBtn" style="flex:none">+ Meeting</button></div>
+      <form id="newMeetingForm" class="stack hidden">
+        <input id="mTitle" placeholder="Title" required><input id="mDate" type="datetime-local" required>
+        <div class="row"><select id="mType"><option>General</option><option>Executive</option><option>Committee</option></select>
+        <label class="note" style="align-self:center"><input type="checkbox" id="mMand" checked> Mandatory</label></div>
+        <button class="gold">Create meeting</button>
+      </form>
+      <div class="note" id="quorum">Quorum: –</div><div class="bar"><i id="quorumBar" style="width:0"></i></div>
+      <input id="quickSn" placeholder="Type / scan student no. + Enter" style="width:100%;margin-bottom:8px">
+      <div class="scroll short" id="attendList"></div>
+      <button class="gold" id="saveAttend" style="width:100%;margin-top:8px">Finalize attendance</button>
+      <p class="note" id="attendNote"></p>
+    </section>
+
+    <section class="card" data-tile="repo">
+      <h3>Cloud File Repository</h3>
+      <div class="chips" id="folders"></div>
+      <div class="scroll"><table><tbody id="fileRows"></tbody></table></div>
+    </section>
+
+    <section class="card" data-tile="broadcast">
+      <h3>Email Announcement Broadcaster</h3>
+      <form id="annForm" class="stack">
+        <input id="aTitle" placeholder="Subject" required>
+        <select id="aAud"><option value="All">All members</option><option value="Active_Only">Active members only</option><option value="Officers_Only">Officers only</option></select>
+        <textarea id="aBody" rows="5" placeholder="Compose email announcement" required></textarea>
+        <button class="gold">Broadcast Announcement</button>
+      </form>
+      <h4>Recent</h4><div class="scroll short" id="annList"></div>
+    </section>
+
+    <section class="card hidden" data-tile="audit">
+      <h3>Audit Log <button class="ghost small" id="auditRefresh">Refresh</button></h3>
+      <div class="scroll"><table><thead><tr><th>When</th><th>Who</th><th>Action</th><th>Detail</th><th>IP</th></tr></thead><tbody id="auditRows"></tbody></table></div>
+    </section>
+  </div>
+</main>
+
+<dialog id="memberDlg">
+  <form id="memberForm" class="stack" method="dialog">
+    <h3 id="dlgTitle">Member</h3>
+    <div class="row"><input id="eFirst" placeholder="First name" required><input id="eLast" placeholder="Last name" required></div>
+    <div class="row"><input id="eSn" placeholder="Student number" required><select id="eYear"><option>1</option><option>2</option><option>3</option><option selected>4</option><option>5</option></select></div>
+    <input id="eSchool" type="email" placeholder="School email" required>
+    <input id="ePersonal" type="email" placeholder="Personal email" required>
+    <input id="ePhone" placeholder="Contact number">
+    <select id="eDept"><option value="">No department</option><option>Creatives</option><option>Marketing</option><option>Media</option><option>Relations</option><option>Operations</option><option>Technology</option></select>
+    <div class="row adminOnly">
+      <select id="eRole"><option>Member</option><option>Officer</option></select>
+      <select id="eTitle">
+        <option value="">Officer title…</option>
+        <optgroup label="Executive Board">
+          <option>President</option>
+          <option>Vice President Internal</option>
+          <option>Vice President External</option>
+          <option>Secretary</option>
+        </optgroup>
+        <optgroup label="Department Chiefs &amp; Vice Chiefs">
+          <option>Chief of Creatives</option><option>Vice Chief of Creatives</option>
+          <option>Chief of Marketing</option><option>Vice Chief of Marketing</option>
+          <option>Chief of Media</option><option>Vice Chief of Media</option>
+          <option>Chief of Relations</option><option>Vice Chief of Relations</option>
+          <option>Chief of Operations</option><option>Vice Chief of Operations</option>
+          <option>Chief of Technology</option><option>Vice Chief of Technology</option>
+        </optgroup>
+      </select>
+    </div>
+    <label class="note adminOnly"><input type="checkbox" id="eAdmin"> Admin privileges (can manage roles &amp; view audit log)</label>
+    <label class="note"><input type="checkbox" id="eActive" checked> Active</label>
+    <div class="row"><button class="gold" id="saveMember" value="save">Save</button><button type="button" class="ghost" id="delMember">Delete</button><button type="button" class="ghost" id="closeDlg">Cancel</button></div>
+  </form>
+</dialog>
+
+<script src="/static/common.js"></script>
+<script>
+let me, members = [], marks = {}, editing = null, folder = "";
+const isAdmin = () => !!me.is_admin;
+
+/* ---- members ---- */
+async function loadMembers() {
+  const p = new URLSearchParams();
+  [["q", "#fSearch"], ["role", "#fRole"], ["department", "#fDept"], ["year_level", "#fYear"], ["is_active", "#fStatus"]].forEach(([k, s]) => $(s).value && p.set(k, $(s).value));
+  members = await api("/api/members?" + p);
+  $("#memberRows").innerHTML = members.map((m) => `<tr class="click" data-id="${m.id}"><td>${esc(m.student_number)}</td><td>${esc(m.last_name)}, ${esc(m.first_name)}</td>
+    <td>${esc(m.officer_title || m.role)}${m.department ? " · " + esc(m.department) : ""} / Y${m.year_level}</td><td><small>${esc(m.school_email)}<br>${esc(m.personal_email)}</small></td>
+    <td><span class="badge ${m.is_active ? "on" : "off"}">${m.is_active ? "Active" : "Inactive"}</span></td></tr>`).join("") || "<tr><td colspan=5>No members found.</td></tr>";
+  renderAttend();
+}
+["fRole", "fDept", "fYear", "fStatus"].forEach((id) => $("#" + id).addEventListener("change", guard(loadMembers)));
+let deb; $("#fSearch").addEventListener("input", () => { clearTimeout(deb); deb = setTimeout(guard(loadMembers), 250); });
+$("#csvIn").addEventListener("change", guard(async (e) => {
+  const fd = new FormData(); fd.append("file", e.target.files[0]);
+  const r = await api("/api/members/import-csv", { method: "POST", body: fd });
+  toast(`Imported ${r.created}, skipped ${r.skipped}, errors ${r.errors.length}` + (r.errors[0] ? ` (row ${r.errors[0].row}: ${r.errors[0].error})` : ""), r.errors.length > 0);
+  e.target.value = ""; loadMembers();
+}));
+
+const dlg = $("#memberDlg");
+function openMember(m) {
+  editing = m;
+  $("#dlgTitle").textContent = m ? "Edit member" : "Add member";
+  const f = m || { first_name: "", last_name: "", student_number: "", year_level: 4, school_email: "", personal_email: "", contact_number: "", role: "Member", department: "", officer_title: "", is_admin: false, is_active: true };
+  $("#eFirst").value = f.first_name; $("#eLast").value = f.last_name; $("#eSn").value = f.student_number; $("#eSn").disabled = !!m;
+  $("#eYear").value = f.year_level; $("#eSchool").value = f.school_email; $("#ePersonal").value = f.personal_email;
+  $("#ePhone").value = f.contact_number || ""; $("#eDept").value = f.department || ""; $("#eRole").value = f.role;
+  const t = f.officer_title || "";
+  if (t && ![...$("#eTitle").options].some((o) => o.value === t)) $("#eTitle").add(new Option(t, t));
+  $("#eTitle").value = t; $("#eTitle").disabled = f.role !== "Officer";
+  $("#eAdmin").checked = !!f.is_admin; $("#eActive").checked = f.is_active;
+  $$(".adminOnly").forEach((e) => e.classList.toggle("hidden", !isAdmin()));
+  $("#delMember").classList.toggle("hidden", !m);
+  dlg.showModal();
+}
+$("#eRole").addEventListener("change", () => {
+  const isOff = $("#eRole").value === "Officer";
+  $("#eTitle").disabled = !isOff;
+  if (!isOff) $("#eTitle").value = "";
+});
+$("#eTitle").addEventListener("change", () => {
+  const m = $("#eTitle").value.match(/^(?:Vice )?Chief of (\w+)$/);
+  if (m) $("#eDept").value = m[1];
+  if ($("#eTitle").value) $("#eRole").value = "Officer";
+});
+$("#addBtn").addEventListener("click", () => openMember(null));
+$("#closeDlg").addEventListener("click", () => dlg.close());
+$("#memberRows").addEventListener("click", (e) => { const tr = e.target.closest("tr[data-id]"); if (tr) openMember(members.find((m) => m.id === tr.dataset.id)); });
+$("#memberForm").addEventListener("submit", guard(async (e) => {
+  e.preventDefault();
+  const body = { first_name: $("#eFirst").value.trim(), last_name: $("#eLast").value.trim(), year_level: +$("#eYear").value,
+    school_email: $("#eSchool").value.trim(), personal_email: $("#ePersonal").value.trim(), contact_number: $("#ePhone").value.trim() || null,
+    department: $("#eDept").value || null, is_active: $("#eActive").checked };
+  if (isAdmin()) { body.role = $("#eRole").value; body.officer_title = $("#eTitle").value.trim() || null; body.is_admin = $("#eAdmin").checked; }
+  if (editing) await api("/api/members/" + editing.id, jsonOpts("PATCH", body));
+  else await api("/api/members", jsonOpts("POST", { ...body, student_number: $("#eSn").value.trim() }));
+  dlg.close(); toast("Saved"); loadMembers();
+}));
+$("#delMember").addEventListener("click", guard(async () => {
+  if (!confirm(`Delete ${editing.first_name} ${editing.last_name}? This removes their attendance and submissions.`)) return;
+  await api("/api/members/" + editing.id, { method: "DELETE" }); dlg.close(); toast("Deleted"); loadMembers();
+}));
+
+/* ---- attendance ---- */
+async function loadMeetings() {
+  const ms = await api("/api/meetings");
+  $("#meetingSel").innerHTML = ms.map((m) => `<option value="${m.id}">${esc(m.title)} — ${fmtDate(m.meeting_date)}${m.is_mandatory ? "" : " (optional)"}</option>`).join("") || "<option value=''>No meetings yet</option>";
+  await loadMarks();
+}
+async function loadMarks() {
+  marks = {}; const id = $("#meetingSel").value;
+  if (id) (await api(`/api/meetings/${id}/attendance`)).forEach((a) => (marks[a.user_id] = a.status));
+  renderAttend();
+}
+function renderAttend() {
+  $("#attendList").innerHTML = members.map((m) => `<div class="att"><span>${esc(m.last_name)}, ${esc(m.first_name)}<br><small>${esc(m.student_number)}</small></span>
+    <span class="seg">${["Present", "Excused", "Absent"].map((s) => `<button type="button" class="${marks[m.id] === s ? "sel " + s : ""}" data-u="${m.id}" data-s="${s}">${s}</button>`).join("")}</span></div>`).join("");
+  const vals = Object.values(marks), pres = vals.filter((v) => v === "Present").length, pct = members.length ? Math.round((100 * pres) / members.length) : 0;
+  $("#quorum").textContent = `Quorum: ${pres}/${members.length} present (${pct}%)`; $("#quorumBar").style.width = pct + "%";
+}
+$("#attendList").addEventListener("click", (e) => { const b = e.target.closest("button"); if (b) { marks[b.dataset.u] = b.dataset.s; renderAttend(); } });
+$("#meetingSel").addEventListener("change", guard(loadMarks));
+$("#quickSn").addEventListener("keydown", (e) => {
+  if (e.key !== "Enter") return;
+  const m = members.find((x) => x.student_number === e.target.value.trim());
+  if (!m) return toast("Student number not in current list", true);
+  marks[m.id] = "Present"; e.target.value = ""; renderAttend(); toast(`${m.first_name} ${m.last_name} marked Present`);
+});
+$("#newMeetingBtn").addEventListener("click", () => $("#newMeetingForm").classList.toggle("hidden"));
+$("#newMeetingForm").addEventListener("submit", guard(async (e) => {
+  e.preventDefault();
+  await api("/api/meetings", jsonOpts("POST", { title: $("#mTitle").value, meeting_date: new Date($("#mDate").value).toISOString(), meeting_type: $("#mType").value, is_mandatory: $("#mMand").checked }));
+  e.target.reset(); e.target.classList.add("hidden"); await loadMeetings(); toast("Meeting created");
+}));
+$("#saveAttend").addEventListener("click", guard(async () => {
+  const id = $("#meetingSel").value, records = Object.entries(marks).map(([user_id, status]) => ({ user_id, status }));
+  if (!id || !records.length) return toast("Pick a meeting and mark at least one member", true);
+  const r = await api(`/api/meetings/${id}/attendance`, jsonOpts("POST", { records }));
+  $("#attendNote").textContent = `Saved ${r.saved.length}. Deactivated: ${r.activity_changes.filter((c) => c.deactivated).length}. Warnings emailed: ${r.activity_changes.filter((c) => c.warning_queued).length}.`;
+  toast("Attendance finalized"); loadMembers();
+}));
+
+/* ---- repository ---- */
+async function loadFiles() {
+  const all = await api("/api/submissions");
+  const types = [...new Set(all.map((f) => f.requirement_type))];
+  $("#folders").innerHTML = [["", "All files"], ...types.map((t) => [t, t])].map(([v, l]) => `<span class="chip ${v === folder ? "on" : ""}" data-f="${esc(v)}">📁 ${esc(l)}</span>`).join("");
+  $("#fileRows").innerHTML = all.filter((f) => !folder || f.requirement_type === folder).map((f) => `<tr><td><span class="mono">${esc(f.standardized_filename)}</span><br><small>${esc(f.full_name)} · ${f.role} · ${fmtDate(f.submitted_at)}</small></td>
+    <td><button class="small ghost" data-dl="${f.id}">Download</button></td></tr>`).join("") || "<tr><td>No files yet.</td></tr>";
+}
+$("#folders").addEventListener("click", guard(async (e) => { const c = e.target.closest("[data-f]"); if (c) { folder = c.dataset.f; await loadFiles(); } }));
+$("#fileRows").addEventListener("click", guard(async (e) => {
+  const b = e.target.closest("[data-dl]"); if (b) window.open((await api(`/api/submissions/${b.dataset.dl}/download`)).url, "_blank", "noopener");
+}));
+
+/* ---- broadcast ---- */
+async function loadAnn() {
+  const a = await api("/api/announcements");
+  $("#annList").innerHTML = a.map((x) => `<div class="hist"><span>${esc(x.title)}</span><small>${x.target_audience} · ${fmtDate(x.sent_at)}</small></div>`).join("") || "<p class='note'>None yet.</p>";
+}
+$("#annForm").addEventListener("submit", guard(async (e) => {
+  e.preventDefault();
+  const r = await api("/api/announcements", jsonOpts("POST", { title: $("#aTitle").value, content: $("#aBody").value, target_audience: $("#aAud").value }));
+  toast(`Posted. Emailing ${r.recipient_count} addresses in the background.`); e.target.reset(); loadAnn();
+}));
+
+/* ---- audit (admin) ---- */
+async function loadAudit() {
+  const rows = await api("/api/audit?limit=200");
+  $("#auditRows").innerHTML = rows.map((r) => `<tr><td><small>${new Date(r.created_at).toLocaleString()}</small></td><td><small>${esc(r.actor_label || "—")}</small></td>
+    <td><span class="badge ${["login_failed", "login_email_failed"].includes(r.action) ? "off" : "warn"}">${esc(r.action)}</span></td><td><small>${esc(r.detail || "")}</small></td><td><small>${esc(r.ip || "")}</small></td></tr>`).join("");
+}
+$("#auditRefresh").addEventListener("click", guard(loadAudit));
+
+initNav((tile) => { if (tile === "audit") guard(loadAudit)(); });
+guard(async () => {
+  me = await api("/api/auth/me");
+  $("#who").textContent = `${me.full_name} · ${me.officer_title || me.role}`;
+  $("#crumb").textContent = `Officer Portal · ${me.officer_title || me.role}`;
+  if (isAdmin()) { $("#navAudit").classList.remove("hidden"); $('[data-tile="audit"]').classList.remove("hidden"); }
+  await loadMembers(); await Promise.all([loadMeetings(), loadFiles(), loadAnn(), isAdmin() ? loadAudit() : null]);
+})();
+</script></body></html>
